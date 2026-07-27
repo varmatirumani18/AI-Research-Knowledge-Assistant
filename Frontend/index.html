@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research & Knowledge Assistant</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Research & Knowledge Assistant</h1>
+            <p>Upload research papers, ask grounded questions, compare documents and generate insights.</p>
+        </header>
+
+        <!-- Document Management -->
+        <div class="card">
+            <h2>📄 Upload Document</h2>
+            <input type="file" id="pdf" accept=".pdf">
+            <button id="uploadBtn">Upload PDF</button>
+            <p id="status"></p>
+        </div>
+
+        <!-- RAG QA Search -->
+        <div class="card">
+            <h2>💬 Ask AI</h2>
+            <div class="search-options">
+                <label>Search Mode: </label>
+                <select id="searchMode">
+                    <option value="hybrid">Hybrid Search</option>
+                    <option value="semantic">Semantic Search</option>
+                    <option value="keyword">Keyword Search</option>
+                </select>
+            </div>
+            <textarea id="question" placeholder="Ask any question about your uploaded documents..."></textarea>
+            <button id="askBtn">Ask Question</button>
+        </div>
+
+        <!-- Analytics Dashboard -->
+        <div class="card">
+            <h2>📊 Analytics & Insights</h2>
+            <div class="analytics-grid" id="analyticsGrid">
+                <div>Docs: <b id="statDocs">0</b></div>
+                <div>Chunks: <b id="statChunks">0</b></div>
+                <div>Queries: <b id="statQueries">0</b></div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <h2>⚡ Quick Actions</h2>
+            <div class="grid">
+                <button onclick="handleSummarize('Executive')">Executive Summary</button>
+                <button onclick="handleSummarize('Technical')">Technical Summary</button>
+                <button onclick="handleSummarize('Bullet Point')">Bullet Point Summary</button>
+                <button onclick="handleCompare()">Compare Documents</button>
+                <button onclick="handleClassify()">Classify Document</button>
+            </div>
+        </div>
+
+        <!-- Uploaded Documents -->
+        <div class="card">
+            <h2>📚 Uploaded Documents</h2>
+            <ul class="documents" id="documentList"></ul>
+        </div>
+
+        <!-- Response Window -->
+        <div class="card">
+            <h2>🤖 AI Response</h2>
+            <div class="response" id="responseBox">Your AI response will appear here...</div>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>
