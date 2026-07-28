@@ -1,171 +1,135 @@
 const API_BASE = "https://ai-research-knowledge-assistant-xyl8.onrender.com";
-const uploadBtn = document.getElementById("uploadBtn");
-const pdfInput = document.getElementById("pdf");
-const status = document.getElementById("status");
-const responseBox = document.getElementById("responseBox");
-const documentList = document.getElementById("documentList");
-const askBtn = document.getElementById("askBtn");
-const questionInput = document.getElementById("question");
 
 document.addEventListener("DOMContentLoaded", () => {
-    refreshDocuments();
-    refreshAnalytics();
-    askBtn.addEventListener("click", handleAsk);
-    uploadBtn.addEventListener("click", uploadPDF);
+    fetchAnalytics();
 });
 
-async function uploadPDF() {
-    const file = pdfInput.files[0];
-    if (!file) {
-        status.style.color = "red";
-        status.textContent = "Please select a PDF document.";
+// Helper for UI Feedback
+function showStatus(message, isError = false) {
+    const statusEl = document.getElementById("statusMessage");
+    if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.className = isError ? "status-error" : "status-success";
+    }
+}
+
+// Upload PDF Document
+async function uploadDocument() {
+    const fileInput = document.getElementById("pdfFile");
+    if (!fileInput || !fileInput.files[0]) {
+        alert("Please select a PDF file first.");
         return;
     }
-
-    uploadBtn.disabled = true;
-    uploadBtn.textContent = "Uploading...";
-    status.style.color = "#2563eb";
-    status.textContent = "Processing and indexing document...";
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", fileInput.files[0]);
+
+    showStatus("Uploading, processing, and indexing document...");
 
     try {
-        const res = await fetch(`${API_BASE}/upload`, { method: "POST", body: formData });
-        const data = await res.json();
+        const response = await fetch(`${API_BASE}/upload`, {
+            method: "POST",
+            body: formData
+        });
 
-        if (res.ok) {
-            status.style.color = "green";
-            status.textContent = data.message;
-            pdfInput.value = "";
-            refreshDocuments();
-            refreshAnalytics();
-            responseBox.innerHTML = `<b>Ingestion Complete:</b><br>Processed ${data.total_pages} page(s) into ${data.total_chunks} indexable chunks.`;
+        const data = await response.json();
+        if (response.ok) {
+            showStatus(`Success: ${data.message || "Document uploaded successfully!"}`);
+            fetchAnalytics();
         } else {
-            status.style.color = "red";
-            status.textContent = data.error;
+            showStatus(`Error: ${data.error || "Failed to upload document"}`, true);
         }
     } catch (err) {
-        status.style.color = "red";
-        status.textContent = "Failed to connect to backend service.";
+        console.error("Upload error:", err);
+        showStatus("Failed to connect to backend server.", true);
     }
-
-    uploadBtn.disabled = false;
-    uploadBtn.textContent = "Upload PDF";
 }
 
-async function handleAsk() {
-    const question = questionInput.value.trim();
-    const mode = document.getElementById("searchMode").value;
+// Ask Question (RAG Query)
+async function askQuestion() {
+    const queryInput = document.getElementById("userQuery");
+    const modeSelect = document.getElementById("searchMode");
+    const resultBox = document.getElementById("queryResult");
 
-    if (!question) {
-        responseBox.innerHTML = "<b style='color:red;'>Please enter a question first.</b>";
+    if (!queryInput || !queryInput.value.trim()) {
+        alert("Please enter a question.");
         return;
     }
 
-    responseBox.innerHTML = "<i>Searching context and generating grounded answer...</i>";
+    resultBox.textContent = "Searching document and generating answer...";
 
     try {
-        const res = await fetch(`${API_BASE}/query`, {
+        const response = await fetch(`${API_BASE}/query`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question, mode, session_id: "user_session_1" })
+            body: JSON.stringify({
+                question: queryInput.value,
+                mode: modeSelect ? modeSelect.value : "hybrid"
+            })
         });
-        const data = await res.json();
 
-        let citationsHTML = "";
-        if (data.citations && data.citations.length > 0) {
-            citationsHTML = `<br><br><b>Citations & Sources:</b><br>` +
-                data.citations.map(c => `• File: <i>${c.document}</i> (Page ${c.page})`).join("<br>");
-        }
-
-        responseBox.innerHTML = `${data.answer.replace(/\n/g, "<br>")}${citationsHTML}`;
-        refreshAnalytics();
-    } catch (err) {
-        responseBox.innerHTML = "<b style='color:red;'>Failed to communicate with RAG endpoint.</b>";
-    }
-}
-
-async function handleSummarize(type) {
-    responseBox.innerHTML = `<i>Generating ${type} Summary...</i>`;
-    try {
-        const res = await fetch(`${API_BASE}/summarize`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type })
-        });
-        const data = await res.json();
-        responseBox.innerHTML = data.summary ? data.summary.replace(/\n/g, "<br>") : data.error;
-    } catch (err) {
-        responseBox.innerHTML = "<b style='color:red;'>Summarization failed.</b>";
-    }
-}
-
-async function handleCompare() {
-    responseBox.innerHTML = "<i>Comparing uploaded documents...</i>";
-    try {
-        const res = await fetch(`${API_BASE}/compare`, { method: "POST" });
-        const data = await res.json();
-        responseBox.innerHTML = data.comparison ? data.comparison.replace(/\n/g, "<br>") : data.error;
-    } catch (err) {
-        responseBox.innerHTML = "<b style='color:red;'>Comparison failed.</b>";
-    }
-}
-
-async function handleClassify() {
-    responseBox.innerHTML = "<i>Running TensorFlow classification inference...</i>";
-    try {
-        const res = await fetch(`${API_BASE}/classify`, { method: "POST" });
-        const data = await res.json();
-        if (data.error) {
-            responseBox.innerHTML = `<b style='color:red;'>${data.error}</b>`;
+        const data = await response.json();
+        if (response.ok) {
+            resultBox.innerHTML = `<strong>Answer:</strong> ${data.answer}<br/><br/><em>Source Page: ${data.page || "N/A"}</em>`;
         } else {
-            responseBox.innerHTML = `<b>Document Classification Results:</b><br>` +
-                `• File: <b>${data.filename}</b><br>` +
-                `• Predicted Category: <b style='color:#2563eb;'>${data.predicted_category}</b><br>` +
-                `• Model Confidence: <b>${data.confidence}</b>`;
+            resultBox.textContent = `Error: ${data.error || "Query failed"}`;
         }
     } catch (err) {
-        responseBox.innerHTML = "<b style='color:red;'>Classification failed.</b>";
+        console.error("Query error:", err);
+        resultBox.textContent = "Failed to connect to backend server.";
     }
 }
 
-async function refreshDocuments() {
+// Get Executive Summary
+async function getSummary() {
+    const resultBox = document.getElementById("summaryResult");
+    if (resultBox) resultBox.textContent = "Generating summary...";
+
     try {
-        const res = await fetch(`${API_BASE}/documents`);
-        const data = await res.json();
-        documentList.innerHTML = "";
-        data.documents.forEach(doc => {
-            const li = document.createElement("li");
-            li.innerHTML = `
-                <span><b>${doc.filename}</b> (${doc.total_pages} pages, ${doc.total_chunks} chunks)</span>
-                <button class="delete" onclick="deleteDoc('${doc.id}')">Delete</button>
-            `;
-            documentList.appendChild(li);
-        });
+        const response = await fetch(`${API_BASE}/summarize`, { method: "POST" });
+        const data = await response.json();
+        if (response.ok && resultBox) {
+            resultBox.textContent = data.summary;
+        } else if (resultBox) {
+            resultBox.textContent = `Error: ${data.error || "Summarization failed"}`;
+        }
     } catch (err) {
-        console.error("Error loading documents:", err);
+        console.error("Summary error:", err);
+        if (resultBox) resultBox.textContent = "Failed to connect to backend server.";
     }
 }
 
-async function deleteDoc(docId) {
+// Classify Document
+async function classifyDocument() {
+    const resultBox = document.getElementById("classifyResult");
+    if (resultBox) resultBox.textContent = "Classifying document domain...";
+
     try {
-        await fetch(`${API_BASE}/documents/${docId}`, { method: "DELETE" });
-        refreshDocuments();
-        refreshAnalytics();
+        const response = await fetch(`${API_BASE}/classify`, { method: "POST" });
+        const data = await response.json();
+        if (response.ok && resultBox) {
+            resultBox.textContent = `Predicted Domain: ${data.domain || data.category}`;
+        } else if (resultBox) {
+            resultBox.textContent = `Error: ${data.error || "Classification failed"}`;
+        }
     } catch (err) {
-        console.error("Delete failed:", err);
+        console.error("Classify error:", err);
+        if (resultBox) resultBox.textContent = "Failed to connect to backend server.";
     }
 }
 
-async function refreshAnalytics() {
+// Fetch Analytics Stats
+async function fetchAnalytics() {
     try {
-        const res = await fetch(`${API_BASE}/analytics`);
-        const data = await res.json();
-        document.getElementById("statDocs").textContent = data.total_documents;
-        document.getElementById("statChunks").textContent = data.total_processed_chunks;
-        document.getElementById("statQueries").textContent = data.total_questions_answered;
+        const response = await fetch(`${API_BASE}/analytics`);
+        const data = await response.json();
+        if (response.ok) {
+            const statsEl = document.getElementById("analyticsStats");
+            if (statsEl) {
+                statsEl.textContent = `Documents: ${data.total_documents || 0} | Chunks: ${data.total_chunks || 0}`;
+            }
+        }
     } catch (err) {
-        console.error("Error loading analytics:", err);
+        console.warn("Analytics fetch failed (server waking up):", err);
     }
 }
