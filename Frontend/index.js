@@ -1,4 +1,4 @@
-const API_BASE = "https://ai-research-knowledge-assistant-xyl8.onrender.com";
+const API_BASE = "https://ai-research-knowledge-assistant-xyt8.onrender.com";
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchAnalytics();
