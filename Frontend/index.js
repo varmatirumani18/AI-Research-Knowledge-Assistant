@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:5000";
+const API_BASE = "https://ai-research-knowledge-assistant-xyl8.onrender.com";
 const uploadBtn = document.getElementById("uploadBtn");
 const pdfInput = document.getElementById("pdf");
 const status = document.getElementById("status");
